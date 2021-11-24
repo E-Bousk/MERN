@@ -1,11 +1,17 @@
 // On appelle notre modèle USER
 const UserModel = require('../models/user.model');
 
+
+
+// ***************************
+// *****  CREATE  USER   *****
+// ***************************
 // On déclare et on exporte la fonction "signUp"
 // Dans la REQuest (ce qui est envoyé lorsque l'on fait un POST à signUP (/api/user/register))
 // il y a des informations qui transitent (le pseudo, l'email et le mot de passe)
 module.exports.signUp = async (req, res) => {
-  // console.log('req => ', req.body);
+  // « req.body » correspond aux données passées dans des inputs
+  // console.log('req.body => ', req.body);
   const {pseudo, email, password} = req.body; // On déstructure, c'est à dire : « pseudo » à la place de « req.body.pseudo » etc...
 
   try {
