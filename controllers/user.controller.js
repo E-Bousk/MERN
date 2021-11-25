@@ -63,8 +63,7 @@ module.exports.updateUser = async (req, res) => {
   // l'ID est valide
   try {
     // On prend le 'userModel'
-    // await UserModel.findOneAndUpdate( // AWAIT enlevé sinon erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
-    UserModel.findOneAndUpdate(
+    await UserModel.findOneAndUpdate(
       // On lui passe l'ID de l'utilisateur que l'on veut éditer
       {_id: req.params.id},
       {
@@ -73,15 +72,18 @@ module.exports.updateUser = async (req, res) => {
           bio: req.body.bio
         }
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true},
-      // Dans le callback: soit il y a une ERReur soit on a tous les DOCS (data)
-      (err, docs) => {
-        // pas d'erreur : on envoit les data --> on inscrit la 'bio' dans la BDD 
-        if(!err) return res.send(docs);
-        // erreur : status 500 et message erreur
-        if (err) return res.status(500).send({message: err});
-      }
-    );
+      { new: true, upsert: true, setDefaultsOnInsert: true}
+      // ‼ CALLBACK supprimé => erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13 ‼
+      // // Dans le callback: soit il y a une ERReur soit on a tous les DOCS (data)
+      // (err, docs) => {
+      //   // pas d'erreur : on envoit les data --> on inscrit la 'bio' dans la BDD 
+      //   if(!err) return res.send(docs);
+      //   // erreur : status 500 et message erreur
+      //   if (err) return res.status(500).send({message: err});
+      // }
+    ).then((docs) => res.send(docs))
+    .catch((err) => res.status(500).send({message: err}));
+
   } catch (err) {
     res.status(500).json({message: err});
   };
@@ -126,36 +128,23 @@ module.exports.follow = async (req, res) => {
 
   try {
     // * Ajout du FOLLOWING la liste du FOLLOWER *
-    UserModel.findByIdAndUpdate( // AWAIT enlevé sinon erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
+    await UserModel.findByIdAndUpdate(
       // 1er paramètre : l'ID de l'utilisateur qui veut suivre
       req.params.id,
       // 2eme paramètre : "addToSet" pour ajouter au tableau de données (on utilise la méthode PATCH)
       // => following = ID de la personne qui doit être suivit (sur laquelle on a cliqué)
       { $addToSet: {following: req.body.idToFollow }},
-      { new: true, upsert: true },
-      // On lance un callback
-      (err, docs) => {
-        // Lorsque'il n'y a pas d'erreur : 
-        // ‼ on ne fait pas de return car on n'arrête pas la fonction : 
-        // il faut aussi ajouté l'utilisateur dans les followers de l'autre ‼
-        // donc on continue le try (et on fait un deuxième AWAIT - Supprimé pour éviter erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
-        if(!err) res.status(201).json(docs);
-        // Lorsqu'il y a une erreur :
-        else return res.status(400).json(err);
-      }
-    );
+      { new: true, upsert: true }
+    ).then((docs) => {res.status(201).json(docs)})
+    .catch((err) => res.status(400).json(err));
+      
     // * Ajout du FOLLOWER dans la liste du FOLLOWING *
-    UserModel.findByIdAndUpdate(
+    await UserModel.findByIdAndUpdate(
       req.body.idToFollow,
       { $addToSet: {followers: req.params.id }},
-      { new: true, upsert: true },
-      (err, docs) => {
-        // Ligne suivante commentée car on ne peut pas retourner 2 responses ("res.status")
-        // (On ne peut retourner que le fait que l'utilisateur a bien ajouté la personne)
-        // if(!err) res.status(201).json(docs);
-        if (err) return res.status(400).json(err);
-      }
-    );
+      { new: true, upsert: true }
+      ).catch((err) => res.status(400).json(err));
+
   } catch (err) {
     // En cas d'erreur : message et status 500
     res.status(500).json({message: err});
@@ -166,38 +155,32 @@ module.exports.follow = async (req, res) => {
 // **** REMOVE  FOLLOWERS ****
 // ***************************
 module.exports.unfollow = async (req, res) => {
-  // On contrôle l' ID du follower
   if (!ObjectID.isValid(req.params.id))
-  // statut 400 si incorrect
   return res.status(400).send('ID invalid : ' + req.params.id);
 
-  // On contrôle l' ID du following
   if (!ObjectID.isValid(req.body.idToUnfollow))
-  // statut 400 si incorrect
   return res.status(400).send('ID to unfollow invalid : ' + req.body.idToUnfollow);
 
   try {
     // * Retrait du FOLLOWING la liste du FOLLOWER *
-    UserModel.findByIdAndUpdate(
+    await UserModel.findByIdAndUpdate(
+      // 1er paramètre : l'ID de l'utilisateur qui ne veut plus suivre
       req.params.id,
+      // 2eme paramètre : "pull" pour retirer un élément au tableau de données
+      // => following = ID de la personne qui ne doit plus être suivit
       { $pull: {following: req.body.idToUnfollow }},
-      { new: true, upsert: true },
-      (err, docs) => {
-        if(!err) res.status(201).json(docs);
-        else return res.status(400).json(err);
-      }
-    );
+      { new: true, upsert: true }
+    ).then((docs) => {res.status(201).json(docs)})
+    .catch((err) => res.status(400).json(err));
+
     // * Retrait du FOLLOWER dans la liste du FOLLOWING *
-    UserModel.findByIdAndUpdate(
+    await UserModel.findByIdAndUpdate(
       req.body.idToUnfollow,
       { $pull: {followers: req.params.id }},
-      { new: true, upsert: true },
-      (err, docs) => {
-        if (err) return res.status(400).json(err);
-      }
-    );
+      { new: true, upsert: true }
+    ).catch((err) => res.status(400).json(err));
+
   } catch (err) {
-    // En cas d'erreur : message et status 500
     res.status(500).json({message: err});
   };
 }
