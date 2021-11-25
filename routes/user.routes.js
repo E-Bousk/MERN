@@ -51,6 +51,7 @@ router.get('/:id', userController.userInfo);
 router.put('/:id', userController.updateUser);
 
 
+
 // ***************************
 // *****  DELETE  USER   *****
 // ***************************
@@ -59,6 +60,17 @@ router.delete('/:id', userController.deleteUser);
 
 
 
+// ***************************
+// ***** ADD   FOLLOWERS *****
+// ***************************
+// Quand méthode PATCH sur l'URI '/follow/:id', exécute la fonction 'follow' (qui est dans 'user.controller')
+router.patch('/follow/:id', userController.follow);
+
+// ***************************
+// **** REMOVE  FOLLOWERS ****
+// ***************************
+// Quand méthode PATCH sur l'URI '/unfollow/:id', exécute la fonction 'unfollow' (qui est dans 'user.controller')
+router.patch('/unfollow/:id', userController.unfollow);
 
 
 // Rendre disponible le router dans toute l'application

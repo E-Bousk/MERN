@@ -55,7 +55,7 @@ module.exports.userInfo = async (req, res) => {
 module.exports.updateUser = async (req, res) => {
   // console.log('req.params => ', req.params);
   // console.log('req.params.id => ', req.params.id);
-  // l' ID est invalide
+  // On vérifie et si l' ID est invalide
   if (!ObjectID.isValid(req.params.id))
     // statut 400
     return res.status(400).send('ID invalid : ' + req.params.id);
@@ -63,7 +63,7 @@ module.exports.updateUser = async (req, res) => {
   // l'ID est valide
   try {
     // On prend le 'userModel'
-    // await UserModel.findOneAndUpdate( // AWAIT enlevé sinon erreur code: 'ERR_HTTP_HEADERS_SENT'
+    // await UserModel.findOneAndUpdate( // AWAIT enlevé sinon erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
     UserModel.findOneAndUpdate(
       // On lui passe l'ID de l'utilisateur que l'on veut éditer
       {_id: req.params.id},
@@ -93,7 +93,7 @@ module.exports.updateUser = async (req, res) => {
 // *****  DELETE  USER   *****
 // ***************************
 module.exports.deleteUser = async (req, res) => {
-  // l' ID est invalide
+  // On verifie et si l' ID est invalide
   if (!ObjectID.isValid(req.params.id))
   // statut 400
   return res.status(400).send('ID invalid : ' + req.params.id);
@@ -101,10 +101,103 @@ module.exports.deleteUser = async (req, res) => {
   try {
     // On passe l'ID en paramètre de REMOVE
     await UserModel.remove({ _id: req.params.id }).exec();
-    // On envoie un message de succès
+    // renvoit un statut 200 pour confirmation avec message de succès (communication entre back et front)
     res.status(200).json({ message: "Successfully deleted. "});
   } catch (err) {
     // En cas d'erreur : message et status 500
     res.status(500).json({message: err});
   };
 };
+
+
+// ***************************
+// ***** ADD   FOLLOWERS *****
+// ***************************
+module.exports.follow = async (req, res) => {
+  // On contrôle l' ID du follower
+  if (!ObjectID.isValid(req.params.id))
+  // statut 400 si incorrect
+  return res.status(400).send('ID invalid : ' + req.params.id);
+
+  // On contrôle l' ID du following
+  if (!ObjectID.isValid(req.body.idToFollow))
+  // statut 400 si incorrect
+  return res.status(400).send('ID to follow invalid : ' + req.body.idToFollow);
+
+  try {
+    // * Ajout du FOLLOWING la liste du FOLLOWER *
+    UserModel.findByIdAndUpdate( // AWAIT enlevé sinon erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
+      // 1er paramètre : l'ID de l'utilisateur qui veut suivre
+      req.params.id,
+      // 2eme paramètre : "addToSet" pour ajouter au tableau de données (on utilise la méthode PATCH)
+      // => following = ID de la personne qui doit être suivit (sur laquelle on a cliqué)
+      { $addToSet: {following: req.body.idToFollow }},
+      { new: true, upsert: true },
+      // On lance un callback
+      (err, docs) => {
+        // Lorsque'il n'y a pas d'erreur : 
+        // ‼ on ne fait pas de return car on n'arrête pas la fonction : 
+        // il faut aussi ajouté l'utilisateur dans les followers de l'autre ‼
+        // donc on continue le try (et on fait un deuxième AWAIT - Supprimé pour éviter erreur code: 'ERR_HTTP_HEADERS_SENT' avec Mongoose 6.0.13)
+        if(!err) res.status(201).json(docs);
+        // Lorsqu'il y a une erreur :
+        else return res.status(400).json(err);
+      }
+    );
+    // * Ajout du FOLLOWER dans la liste du FOLLOWING *
+    UserModel.findByIdAndUpdate(
+      req.body.idToFollow,
+      { $addToSet: {followers: req.params.id }},
+      { new: true, upsert: true },
+      (err, docs) => {
+        // Ligne suivante commentée car on ne peut pas retourner 2 responses ("res.status")
+        // (On ne peut retourner que le fait que l'utilisateur a bien ajouté la personne)
+        // if(!err) res.status(201).json(docs);
+        if (err) return res.status(400).json(err);
+      }
+    );
+  } catch (err) {
+    // En cas d'erreur : message et status 500
+    res.status(500).json({message: err});
+  };
+}
+
+// ***************************
+// **** REMOVE  FOLLOWERS ****
+// ***************************
+module.exports.unfollow = async (req, res) => {
+  // On contrôle l' ID du follower
+  if (!ObjectID.isValid(req.params.id))
+  // statut 400 si incorrect
+  return res.status(400).send('ID invalid : ' + req.params.id);
+
+  // On contrôle l' ID du following
+  if (!ObjectID.isValid(req.body.idToUnfollow))
+  // statut 400 si incorrect
+  return res.status(400).send('ID to unfollow invalid : ' + req.body.idToUnfollow);
+
+  try {
+    // * Retrait du FOLLOWING la liste du FOLLOWER *
+    UserModel.findByIdAndUpdate(
+      req.params.id,
+      { $pull: {following: req.body.idToUnfollow }},
+      { new: true, upsert: true },
+      (err, docs) => {
+        if(!err) res.status(201).json(docs);
+        else return res.status(400).json(err);
+      }
+    );
+    // * Retrait du FOLLOWER dans la liste du FOLLOWING *
+    UserModel.findByIdAndUpdate(
+      req.body.idToUnfollow,
+      { $pull: {followers: req.params.id }},
+      { new: true, upsert: true },
+      (err, docs) => {
+        if (err) return res.status(400).json(err);
+      }
+    );
+  } catch (err) {
+    // En cas d'erreur : message et status 500
+    res.status(500).json({message: err});
+  };
+}
