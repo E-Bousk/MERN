@@ -19,6 +19,15 @@ const userController = require('../controllers/user.Controller');
 // donc « URL_de_l'appli/api/user/register » amène vers la fonction "signUp" de "auth.controller"
 router.post("/register", authController.signUp);
 
+// ***************************
+// *****     LOGIN       *****
+// ***************************
+router.post("/login", authController.signIn);
+
+// ***************************
+// *****     LOGOUT      *****
+// ***************************
+router.get("/logout", authController.signOut);
 
 
 // ***************************************************
