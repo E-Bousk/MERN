@@ -4,6 +4,9 @@ const UserModel = require('../models/user.model');
 // On appelle la bibliothèque "Json web token"
 const jwt = require('jsonwebtoken');
 
+// On appelle les fonctions "signUpErrors" et "signInErrors"
+const { signUpErrors, signInErrors } = require('../utils/errors.utils');
+
 // On définit la durée de vie du token
 const maxAge = 3 * 24 * 60 * 60 * 1000; // 3jours (en millisecondes)
 
@@ -35,8 +38,9 @@ module.exports.signUp = async (req, res) => {
     res.status(201).json({ user: user._id });
   }
   catch(err) { // si il y a un problème, on CATCH : on récupère l'erreur en paramètre
-    // réponse classique en renvoyant l'erreur dans la console
-    res.status(200).send({ err });
+    // on crée une variable "errors" qui prends la contenance de la fonction "singUpErrors" avec "err" en paramètre
+    const errors = signUpErrors(err);
+    res.status(200).send({ errors });
   };
 };
 
@@ -63,7 +67,8 @@ module.exports.signIn = async (req, res) => {
     // On génère une réponse pour dire que ça reussit
     res.status(200).json({ user: user._id });
   } catch (err) {
-    res.status(200).json(err);
+    const errors = signInErrors(err);
+    res.status(200).json({ errors });
   };
 };
 
