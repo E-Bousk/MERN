@@ -4,8 +4,11 @@ const express = require('express');
 // On charge la bibiothèque "cookie parser"
 const cookieParser = require('cookie-parser');
 
-// On appelle le fichier './routes/user.routes'
+// On importe le fichier './routes/user.routes'
 const userRoutes = require('./routes/user.routes');
+
+// On importe le fichier './routes/post.routes'
+const postRoutes = require('./routes/post.routes');
 
 // Recupère le fichier « .env »
 require('dotenv').config({ path: './config/.env' });
@@ -51,6 +54,9 @@ app.get('/jwtid', requireAuth, (req, res) => {
 // ***************************************************
 // Quand il y aura la requête « /api/user » on appellera « userRoutes »
 app.use('/api/user', userRoutes);
+
+// On déclenche le "post.routes" sur les requêtes « /api/post »
+app.use('/api/post', postRoutes);
 
 
 
