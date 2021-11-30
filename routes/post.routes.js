@@ -1,10 +1,15 @@
 const router = require('express').Router();
 const postController = require('../controllers/post.controller');
-
+// Multer est un middleware pour la gestion « multipart/form-data »
+// qui est principalement utilisé pour télécharger des fichiers.
+const multer = require('multer');
+const upload = multer();
 
 // Posts
 router.get('/', postController.readPost);
-router.post('/', postController.createPost);
+// On va maintenant envoyer une image dans le POST (req.file en plus du req.body)
+// Cette image doit donc transiter par "multer"
+router.post('/', upload.single('file'), postController.createPost);
 router.put('/:id', postController.updatePost);
 router.delete('/:id', postController.deletePost);
 router.patch('/like-post/:id', postController.likePost);
